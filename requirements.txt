@@ -1,0 +1,10 @@
+robotframework
+robotframework-browser
+robotframework-faker
+robotframework-robocop
+robotframework-tidy
+robotframework-pabot
+robotframework-jsonlibrary
+robotframework-requests
+requests
+img2pdf
