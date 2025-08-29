@@ -1,38 +1,46 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS_LTS'
+    }
+
     environment {
         VENV_DIR = '.venv'
-        TEST_COMMAND = 'robot -v device:s1 ./src/test'
-        REQUIREMENTS_FILE = 'requirements.txt'
+        TEST_DIR = './src/test'
     }
 
     stages {
-        stage('Preparar Ambiente Python') {
+        stage('Criar Virtualenv') {
             steps {
                 sh '''
                     python3 -m venv ${VENV_DIR}
                     . ${VENV_DIR}/bin/activate
                     pip install --upgrade pip
-                    pip install -r ${REQUIREMENTS_FILE}
+                    pip install -r requirements.txt
                 '''
             }
         }
 
-        stage('Instalar Browser Library') {
+        stage('Instalar Playwright via rfbrowser') {
             steps {
                 sh '''
                     . ${VENV_DIR}/bin/activate
+
+                    # Adiciona o npm ao PATH dentro do venv
+                    export PATH=$PATH:$(npm bin -g)
+
+                    # Executa o rfbrowser init
                     rfbrowser init
                 '''
             }
         }
 
-        stage('Executar Testes Robot Framework') {
+        stage('Executar testes') {
             steps {
                 sh '''
                     . ${VENV_DIR}/bin/activate
-                    ${TEST_COMMAND}
+                    robot -v device:s1 ${TEST_DIR}
                 '''
             }
         }
@@ -40,7 +48,7 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline finalizada.'
+            archiveArtifacts artifacts: '/output.xml,/log.html,/report.html', allowEmptyArchive: true
         }
     }
 }
