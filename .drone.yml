@@ -1,0 +1,23 @@
+kind: pipeline
+type: docker
+name: robot-tests-browser
+
+steps:
+  - name: Run Robot Framework Tests
+    image: python:3.10
+    environment:
+      RFBROWSER_SKIP_INIT: 0
+    commands:
+      - apt-get update && apt-get install -y curl unzip wget chromium
+      - pip install -r requirements.txt
+      - rfbrowser init
+      - robot -v device:s1 ./src/test
+
+trigger:
+  event:
+    - push
+    - cron
+
+cron:
+  - name: daily-9am
+    expr: '0 12 * * *' # 9 AM horário Brasil (UTC-3)
