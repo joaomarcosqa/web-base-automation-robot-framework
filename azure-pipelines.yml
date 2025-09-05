@@ -1,10 +1,10 @@
 trigger:
   branches:
     include:
-      - main   # executa a cada push na main
+      - main
 
 schedules:
-  - cron: "0 12 * * *"   # 09h BRT = 12h UTC
+  - cron: "0 9 * * *"
     displayName: Daily 9AM Run
     branches:
       include:
@@ -18,25 +18,37 @@ steps:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: "3.10"
+      addToPath: true
+
+  - script: python -m pip install --upgrade pip
+    displayName: "Upgrade pip"
+
+  - script: pip install -r requirements.txt
+    displayName: "Install dependencies"
+
+  - script: sudo apt-get update && sudo apt-get install -y curl
+    displayName: "Install curl"
+
+  - script: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    displayName: "Setup Node.js"
+
+  - script: sudo apt-get install -y nodejs
+    displayName: "Install Node.js"
+
+  - script: npx playwright install-deps
+    displayName: "Install Playwright dependencies"
+
+  - script: rfbrowser init
+    displayName: "Init Browser Library"
+
+  - script: mkdir -p evidence/screenshots evidence/pdf
+    displayName: "Prepare evidence folders"
+
+  - script: robot -v Headless:true -v device:s1 ./src/test
+    displayName: "Run Robot Framework tests"
 
   - script: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt
-      sudo apt-get update && sudo apt-get install -y curl
-      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
-      sudo apt-get install -y nodejs
-      npx playwright install-deps
-      rfbrowser init
-      mkdir -p evidence/screenshots
-      mkdir -p evidence/pdf
-      robot -v Headless:true -v device:s1 ./src/test
       cp log.html evidence/
       cp report.html evidence/
       cp output.xml evidence/
-    displayName: "Run Robot Framework Tests"
-
-  - task: PublishBuildArtifacts@1
-    inputs:
-      PathtoPublish: "evidence"
-      ArtifactName: "test-evidence"
-      publishLocation: "Container"
+    displayName: "Copy Robot logs to evidence folder"
