@@ -1,23 +1,37 @@
+drone
 kind: pipeline
 type: docker
-name: robot-tests-browser
+name: default
 
 steps:
-  - name: Run Robot Framework Tests
+  - name: run-tests
     image: python:3.10
-    environment:
-      RFBROWSER_SKIP_INIT: 0
     commands:
-      - apt-get update && apt-get install -y curl unzip wget chromium
+      # atualizar pip
+      - python -m pip install --upgrade pip
+      
+      # instalar dependências do projeto
       - pip install -r requirements.txt
+      
+      # instalar Node.js (necessário para Browser Library)
+      - apt-get update && apt-get install -y curl
+      - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+      - apt-get install -y nodejs
+
+      # instalar dependências de browser via Playwright
+      - npx playwright install-deps
+
+      # inicializar o Browser Library (Playwright + Node deps)
       - rfbrowser init
-      - robot -v device:s1 ./src/test
 
-trigger:
-  event:
-    - push
-    - cron
+      # garantir estrutura de evidências
+      - mkdir -p evidence/screenshots
+      - mkdir -p evidence/pdf
 
-cron:
-  - name: daily-9am
-    expr: '0 12 * * *' # 9 AM horário Brasil (UTC-3)
+      # rodar os testes Robot Framework em modo headless
+      - robot -v Headless:true -v device:s1 ./src/test
+
+      # mover os logs do Robot Framework para a pasta evidence
+      - cp /drone/src/log.html evidence/
+      - cp /drone/src/report.html evidence/
+      - cp /drone/src/output.xml evidence/

@@ -1,0 +1,42 @@
+trigger:
+  branches:
+    include:
+      - main   # executa a cada push na main
+
+schedules:
+  - cron: "0 12 * * *"   # 09h BRT = 12h UTC
+    displayName: Daily 9AM Run
+    branches:
+      include:
+        - main
+    always: true
+
+pool:
+  vmImage: "ubuntu-latest"
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "3.10"
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+      sudo apt-get update && sudo apt-get install -y curl
+      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+      sudo apt-get install -y nodejs
+      npx playwright install-deps
+      rfbrowser init
+      mkdir -p evidence/screenshots
+      mkdir -p evidence/pdf
+      robot -v Headless:true -v device:s1 ./src/test
+      cp log.html evidence/
+      cp report.html evidence/
+      cp output.xml evidence/
+    displayName: "Run Robot Framework Tests"
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: "evidence"
+      ArtifactName: "test-evidence"
+      publishLocation: "Container"
